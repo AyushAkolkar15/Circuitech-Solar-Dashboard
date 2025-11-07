@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>☀️ Circuitech Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="solar-bg" id="solar-bg"></div>
+  <header>
+    <h1>🌞 Circuitech Solar Dashboard</h1>
+    <nav>
+      <a href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('about') }}">About</a>
+      <a href="{{ url_for('logout') }}">Logout</a>
+      <a href="{{ url_for('simulation') }}">Dashboard</a>
+    </nav>
+  </header>
+
+  <div class="status-bar">
+    <div class="status-item"><h2>98%</h2><p>Panel Efficiency</p></div>
+    <div class="status-item"><h2>Clean</h2><p>Panel Status</p></div>
+    <div class="status-item"><h2>28°C</h2><p>Ambient Temp</p></div>
+    <div class="status-item"><h2>5.2 kWh</h2><p>Energy Output</p></div>
+  </div>
+
+  <main class="cards-container" id="cards-container">
+    {% for field, title in field_map.items() %}
+    <article class="card" onclick="location.href='{{ url_for('details', field=field) }}'">
+      <h3>{{ title }}</h3>
+      <div class="value" id="latest-{{ field }}">--</div>
+      <canvas id="chart-{{ field }}" style="height:160px;"></canvas>
+    </article>
+    {% endfor %}
+  </main>
+
+  <footer>☀️ Circuitech — Solar Tracking & Cleaning</footer>
+
+<script>
+async function loadCharts() {
+  {% for field, title in field_map.items() %}
+  try {
+    const res = await fetch('/api/field/{{ field }}?results=30');
+    if (!res.ok) throw new Error('Network');
+    const j = await res.json();
+    const labels = j.labels;
+    const values = j.values;
+    const ctx = document.getElementById('chart-{{ field }}').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: { labels: labels, datasets: [{ data: values, borderColor: '#ff9800', backgroundColor: 'rgba(255,193,7,0.2)', fill:true, tension:0.35 }]},
+      options: { plugins:{legend:{display:false}}, scales:{x:{display:false}, y:{beginAtZero:false}}}
+    });
+    // latest
+    document.getElementById('latest-{{ field }}').textContent = values.length ? (values[values.length-1] ?? '--') : '--';
+  } catch(e) {
+    console.warn('chart load failed for field {{ field }}', e);
+  }
+  {% endfor %}
+}
+loadCharts();
+setInterval(loadCharts, 30000);
+</script>
+</body>
+</html>

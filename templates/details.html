@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }} — Details</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <header>
+    <h1>☀️ Circuitech — Details</h1>
+    <div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a></div>
+  </header>
+
+  <main class="details-wrap">
+    <h2 style="color:#ff8c00">{{ title }}</h2>
+    <div class="chart-card">
+      <canvas id="detailChart"></canvas>
+    </div>
+
+    <h3>Recent values</h3>
+    <table class="history">
+      <thead><tr><th>Time</th><th>Value</th></tr></thead>
+      <tbody>
+        {% for row in history %}
+        <tr><td>{{ row.created_at }}</td><td>{{ row.value if row.value is not none else '--' }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </main>
+
+<script>
+(async function(){
+  try {
+    const res = await fetch('/api/field/' + {{ field }} + '?results=100');
+    const j = await res.json();
+    const labels = j.labels.map(s => new Date(s).toLocaleString());
+    const values = j.values.map(v => v === null ? null : Number(v));
+    const ctx = document.getElementById('detailChart').getContext('2d');
+    new Chart(ctx, { type:'line', data:{ labels, datasets:[{ label: '{{ title }}', data: values, borderColor:'#ff9800', backgroundColor:'rgba(255,140,0,0.08)', fill:true, tension:0.3 }]}, options:{ plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:false } } }});
+  } catch(e) { console.error(e); }
+})();
+</script>
+</body>
+</html>

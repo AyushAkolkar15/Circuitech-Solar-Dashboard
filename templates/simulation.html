@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Circuitech Solar Dashboard — Simulation</title>
+  <style>
+    :root{--bg-1:#03040b;--bg-2:#07121a;--accent:#00ffd1;--accent2:#00b3ff;--muted:#9fb7c6}
+    *{box-sizing:border-box}
+    body{margin:0;height:100vh;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:radial-gradient(900px 400px at 18% 8%, rgba(0,180,255,0.04), transparent 8%), linear-gradient(180deg,var(--bg-1),var(--bg-2));color:#dffbf5;overflow:hidden}
+
+    header{position:absolute;left:0;right:0;top:0;height:64px;display:flex;align-items:center;justify-content:space-between;padding:12px 28px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.04));backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,0.02);z-index:60}
+    header h1{font-size:16px;margin:0;display:flex;gap:10px;align-items:center}
+    header nav{display:flex;gap:12px}
+    header nav a{color:#bfeee0;text-decoration:none;padding:8px 10px;border-radius:8px;font-size:13px}
+    header nav a:hover{background:linear-gradient(90deg, rgba(0,255,200,0.03), rgba(0,160,255,0.02));color:#fff}
+
+    .wrap{position:relative;width:100%;height:100vh;display:flex;align-items:flex-end;justify-content:center;padding:88px 40px 86px}
+    .sky{position:absolute;inset:0;pointer-events:none}
+    #sunCanvas{position:absolute;left:0;top:0;width:100%;height:58vh;z-index:5}
+    .atmo{position:absolute;inset:0;mix-blend-mode:screen;pointer-events:none;z-index:6}
+
+    .ground{position:relative;width:86vw;max-width:1280px;height:58vh;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.28));box-shadow:0 60px 150px rgba(0,0,0,0.8);display:flex;align-items:flex-end;justify-content:center;padding-bottom:6vh;z-index:10}
+    .horizon{position:absolute;left:0;right:0;bottom:56%;height:1px;background:linear-gradient(90deg, transparent, rgba(255,255,255,0.02), transparent)}
+
+    .rig{position:relative;width:62%;max-width:920px;height:54%;transform-origin:center bottom}
+    .support{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:10px;height:64%;background:linear-gradient(180deg,#0b0f14,#000);border-radius:6px;box-shadow:0 12px 36px rgba(0,0,0,0.7)}
+    .panel-wrap{position:absolute;left:50%;bottom:18%;transform:translateX(-50%);width:78%;height:44%;display:flex;align-items:center;justify-content:center}
+
+    .panel{position:relative;width:72%;height:100%;border-radius:10px;background:linear-gradient(180deg,#0a1a2a,#081220);box-shadow:0 30px 60px rgba(5,10,20,0.9);overflow:visible;transform-origin:center center;transition:transform 700ms cubic-bezier(.2,.9,.2,1)}
+    .panel-edge{position:absolute;inset:0;border-radius:10px;padding:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.02)}
+    .panel-glass{position:absolute;inset:6% 6% 6% 6%;border-radius:6px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter:blur(2px);overflow:hidden}
+
+    .cells{position:absolute;inset:8% 8% 8% 8%;display:grid;grid-template-columns:repeat(6,1fr);grid-gap:2.2%;filter:drop-shadow(0 6px 16px rgba(0,0,0,0.6))}
+    .cell{border-radius:3px;background:linear-gradient(180deg,#021026,#06253a);box-shadow:inset 0 2px 8px rgba(255,255,255,0.02)}
+
+    .gloss{position:absolute;left:-20%;top:-30%;width:140%;height:140%;pointer-events:none;mix-blend-mode:overlay;opacity:0.0;transform:rotate(-18deg);transition:opacity 900ms linear, transform 1600ms linear}
+    .gloss:before{content:'';position:absolute;left:0;top:0;height:100%;width:60%;background:linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.02));filter:blur(18px);opacity:0.95}
+
+    .cleaner{position:absolute;right:-6%;top:16%;width:18%;height:18%;transform-origin:left center;transition:transform 400ms cubic-bezier(.2,.9,.2,1)}
+    .arm{position:absolute;left:0;top:50%;width:100%;height:18%;transform-origin:left center}
+    .arm-bar{height:12px;border-radius:6px;background:linear-gradient(90deg,#1b2a34,#031219);box-shadow:0 12px 26px rgba(0,0,0,0.6)}
+    .brush{position:absolute;left:-8%;top:26%;width:36%;height:48%;border-radius:6px;background:linear-gradient(180deg,#2f2f2f,#0a0a0a);box-shadow:0 10px 22px rgba(0,0,0,0.6)}
+
+    .grid-lines{position:absolute;left:0;top:0;bottom:0;right:0;pointer-events:none;background-image:linear-gradient(to right, rgba(0,255,200,0.008) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,255,200,0.008) 1px, transparent 1px);background-size:220px 220px}
+
+    .hud{position:absolute;right:3.6%;top:8%;width:380px;padding:18px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter:blur(6px);border:1px solid rgba(0,255,200,0.04);box-shadow:0 12px 40px rgba(0,0,0,0.6);z-index:80}
+    .hud h1{margin:0;font-size:12px;letter-spacing:1px;color:var(--muted)}
+    .hud .title{font-size:18px;margin-top:6px;font-weight:700;color:#e8fff7}
+    .metrics{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .metric{padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.18));border:1px solid rgba(255,255,255,0.02)}
+    .metric .k{font-size:20px;font-weight:700;color:var(--accent)}
+    .metric .l{font-size:12px;color:var(--muted)}
+    .status{margin-top:12px;display:flex;gap:8px;align-items:center}
+    .dot{width:12px;height:12px;border-radius:50%;background:#00241a;box-shadow:0 0 18px rgba(0,0,0,0.6)}
+
+    .controls{position:absolute;left:3.8%;bottom:8%;display:flex;gap:10px;align-items:center;z-index:90}
+    .control-btn{padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:#cfeff0;cursor:pointer}
+
+    /* Dust bar at bottom */
+    .dust-wrap{position:fixed;left:6%;right:6%;bottom:20px;height:18px;border-radius:14px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(0,0,0,0.18));padding:3px;border:1px solid rgba(0,255,200,0.04);z-index:120}
+    .dust-bar{height:100%;width:0%;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent2));box-shadow:0 8px 28px rgba(0,255,200,0.08);transition:width 600ms linear}
+    .dust-label{position:absolute;left:50%;top:-28px;transform:translateX(-50%);font-size:13px;color:var(--muted)}
+    .dust-flash{animation:flash 900ms ease-in-out 0s 4;}
+    @keyframes flash{0%{box-shadow:0 8px 28px rgba(255,120,40,0.12)}50%{box-shadow:0 8px 48px rgba(255,80,10,0.5)}100%{box-shadow:0 8px 28px rgba(255,120,40,0.12)}}
+
+    @media (max-width:900px){.hud{position:fixed;left:50%;transform:translateX(-50%);top:auto;bottom:3%;width:92%}.ground{width:94vw}.rig{width:86%}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🌞 Circuitech Solar Dashboard</h1>
+    <nav>
+      <a href="{{ url_for('dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('about') }}">About</a>
+      <a href="{{ url_for('logout') }}">Logout</a>
+      <a href="{{ url_for('simulation') }}">Simulation</a>
+    </nav>
+  </header>
+
+  <div class="wrap">
+    <div class="sky">
+      <canvas id="sunCanvas"></canvas>
+      <div class="atmo"></div>
+    </div>
+
+    <div class="ground" id="ground">
+      <div class="horizon"></div>
+
+      <div class="rig" id="rig">
+        <div class="support"></div>
+        <div class="panel-wrap">
+          <div class="panel" id="panel">
+            <div class="panel-edge">
+              <div class="panel-glass">
+                <div class="cells" id="cells"></div>
+                <div class="gloss" id="gloss"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cleaner" id="cleaner">
+            <div class="arm">
+              <div class="arm-bar"></div>
+              <div class="brush"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-lines"></div>
+    </div>
+
+    <div class="hud" id="hud">
+      <h1>SYSTEM</h1>
+      <div class="title">Solar Tracker · Auto Cleaner (Simulation)</div>
+      <div class="metrics">
+        <div class="metric"><div class="k" id="sunI">0%</div><div class="l">Sun Intensity</div></div>
+        <div class="metric"><div class="k" id="angle">0°</div><div class="l">Panel Angle</div></div>
+        <div class="metric"><div class="k" id="power">-- W</div><div class="l">Est. Power</div></div>
+        <div class="metric"><div class="k" id="battery">-- %</div><div class="l">Battery (est.)</div></div>
+      </div>
+      <div class="status">
+        <div class="dot" id="ledSun"></div>
+        <div style="font-size:13px;color:var(--muted)">Light sensor</div>
+        <div style="width:10px"></div>
+        <div class="dot" id="ledClean"></div>
+        <div style="font-size:13px;color:var(--muted)">Cleaner</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="control-btn" id="btnSpeed">Speed: 1x</button>
+      <button class="control-btn" id="btnPlay">Pause</button>
+    </div>
+
+  </div>
+
+  <div class="dust-wrap">
+    <div class="dust-label" id="dustLabel">Dust Accumulation — 0%</div>
+    <div class="dust-bar" id="dustBar"></div>
+  </div>
+
+  <script>
+    // Elements
+    const canvas = document.getElementById('sunCanvas'); const ctx = canvas.getContext('2d');
+    const panel = document.getElementById('panel'); const cleaner = document.getElementById('cleaner'); const gloss = document.getElementById('gloss');
+    const cells = document.getElementById('cells'); const sunI = document.getElementById('sunI'); const angleEl = document.getElementById('angle');
+    const powerEl = document.getElementById('power'); const battEl = document.getElementById('battery'); const ledSun = document.getElementById('ledSun');
+    const ledClean = document.getElementById('ledClean'); const btnSpeed = document.getElementById('btnSpeed'); const btnPlay = document.getElementById('btnPlay');
+    const dustBar = document.getElementById('dustBar'); const dustLabel = document.getElementById('dustLabel');
+
+    // Canvas resize
+    let W = innerWidth; let H = innerHeight;
+    function resize(){ W = innerWidth; H = innerHeight; canvas.width = W * devicePixelRatio; canvas.height = (H*0.58) * devicePixelRatio; canvas.style.width = W + 'px'; canvas.style.height = (H*0.58) + 'px'; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+    resize(); window.addEventListener('resize', resize);
+
+    // panel cells
+    cells.innerHTML=''; for(let i=0;i<24;i++){const d=document.createElement('div');d.className='cell';cells.appendChild(d)}
+
+    // Simulation params
+    let t = 0; let paused = false; let simSpeed = 1;
+    let cleanerPhase = 0; let cleanerTimer = 0;
+
+    // Dust logic
+    let dust = 0; const dustFillRate = 1/90; // 90s to full at 1x
+    let cleaning = false;
+
+    // Sun path (longer loop ~60s)
+    const path = {x0:-0.08*W, x1:1.08*W, yBase: H*0.15, amp: H*0.28};
+    function ease(x){return (1 - Math.cos(Math.PI * x)) / 2}
+
+    // normalize angle helper
+    function normAngle(a){let r=((a+180)%360)-180; if(r<-180) r+=360; return r}
+
+    function drawSun(x,y,r,intensity){
+      const g = ctx.createRadialGradient(x,y,r*0.3,x,y,r*2.8);
+      g.addColorStop(0, `rgba(255,245,200,${0.95*intensity})`);
+      g.addColorStop(0.4, `rgba(255,200,100,${0.35*intensity})`);
+      g.addColorStop(1, `rgba(255,140,50,0.03)`);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x,y,r*1.6,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.fillStyle = `rgba(255,245,210,${0.96*intensity})`; ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      for(let i=1;i<4;i++){ ctx.globalAlpha = 0.06*intensity; ctx.beginPath(); ctx.arc(x + i*40, y - i*10, r*0.5/i, 0, Math.PI*2); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    }
+
+    function update(dt){ if(paused) return;
+      // advance time slower: full loop ~60s
+      t += dt * 0.00006 * simSpeed; if(t>1) t=0; // tuned slower
+      const s = ease(t);
+      const sx = path.x0 + (path.x1 - path.x0) * s;
+      const sy = path.yBase - Math.sin(Math.PI * s) * path.amp;
+      const intensity = Math.max(0, Math.sin(Math.PI * s));
+
+      // Panel tilt: compute vector to sun and pick orientation that minimizes rotation so panel faces sun side
+      const prect = panel.getBoundingClientRect(); const pcx = prect.left + prect.width/2; const pcy = prect.top + prect.height/2;
+      const raw = Math.atan2(sy - pcy, sx - pcx) * 180/Math.PI; // direction from panel to sun
+      // choose orientation (raw or raw+180) that gives smaller absolute tilt
+      let a1 = normAngle(raw); let a2 = normAngle(raw + 180);
+      let chosen = Math.abs(a1) < Math.abs(a2) ? a1 : a2;
+      // map chosen into tilt relative to horizontal: we want near 0 when sun is level; clamp
+      let tilt = chosen; if(tilt>180) tilt-=360; if(tilt<-180) tilt+=360;
+      // clamp realistic servo range
+      tilt = Math.max(-60, Math.min(60, tilt));
+
+      // Cleaner behavior
+      if(!cleaning){ dust += dustFillRate * dt/16.6667 * simSpeed; dust = Math.min(100, dust); }
+      if(!cleaning && dust >= 100){ cleaning = true; cleanerPhase = 1; cleanerTimer = 0; }
+      if(cleaning){ cleanerTimer += dt/1000 * simSpeed; if(cleanerTimer >= 5){ cleaning = false; dust = 0; cleanerPhase = 0; cleanerTimer = 0; } }
+
+      // DOM transforms
+      panel.style.transform = `rotate(${tilt}deg)`;
+      const cleanerX = (cleanerPhase===1 || cleaning) ? (Math.sin(cleanerTimer*3.2)*28 - 12) : 40;
+      cleaner.style.transform = `translateX(${cleanerX}%) rotate(${tilt*0.06}deg)`;
+      gloss.style.opacity = (0.04 + 0.7*intensity);
+      gloss.style.transform = `translateX(${(t*260)%100}%) rotate(-18deg)`;
+
+      // HUD update
+      sunI.textContent = Math.round(intensity*100) + '%'; angleEl.textContent = Math.round(tilt) + '°'; powerEl.textContent = Math.round(180 * intensity) + ' W'; battEl.textContent = Math.max(10, Math.round(40 + 40*intensity)) + ' %';
+      ledSun.style.background = `radial-gradient(circle at 30% 30%, rgba(0,255,200,${0.9*intensity}), rgba(0,30,20,0.2))`;
+      ledClean.style.background = cleaning ? 'radial-gradient(circle at 30% 30%, rgba(0,255,200,0.95), rgba(0,30,20,0.15))' : '#00231a';
+
+      // dust bar update
+      dustBar.style.width = dust + '%'; dustLabel.textContent = `Dust Accumulation — ${Math.round(dust)}%`;
+      if(dust >= 100){ dustBar.classList.add('dust-flash'); dustLabel.textContent = 'Dust Accumulation — 100% — AUTO CLEANING'; }
+      else { dustBar.classList.remove('dust-flash'); }
+
+      // render sun
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.save(); drawSun(sx, sy, 52 + 64*intensity, intensity); ctx.restore();
+    }
+
+    // animation loop
+    let last = performance.now(); function loop(now){ const dt = now - last; last = now; update(dt); requestAnimationFrame(loop); } requestAnimationFrame(loop);
+
+    // controls
+    btnSpeed.addEventListener('click', ()=>{ if(simSpeed===1){simSpeed=2;btnSpeed.textContent='Speed: 2x'} else if(simSpeed===2){simSpeed=4;btnSpeed.textContent='Speed: 4x'} else {simSpeed=1;btnSpeed.textContent='Speed: 1x'} });
+    btnPlay.addEventListener('click', ()=>{ paused = !paused; btnPlay.textContent = paused ? 'Resume' : 'Pause'; });
+
+    // initial render to avoid blank
+    drawSun(W*0.12, H*0.08, 64, 0.9);
+  </script>
+</body>
+</html>

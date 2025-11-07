@@ -1,0 +1,19 @@
+/* Circuitech styles (trimmed) */
+*{box-sizing:border-box}body{font-family:'Poppins',Segoe UI,sans-serif;margin:0;background:linear-gradient(180deg,#f0f9ff 0%,#ffffff 100%);color:#222}
+header{background:linear-gradient(90deg,#0078ff,#00c6ff);color:#fff;padding:12px 28px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+header h1{margin:0;font-size:1.1rem}
+nav a{color:#fff;margin-left:14px;text-decoration:none;padding:6px 10px;border-radius:8px}
+.cards-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px;padding:48px;max-width:1200px;margin:0 auto;z-index:2}
+.card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 8px 20px rgba(0,0,0,0.06);min-height:200px;cursor:pointer;position:relative}
+.card h3{color:#004c91;margin:0 0 8px}
+.value{font-size:22px;color:#0078ff;font-weight:700;margin-bottom:8px}
+.status-bar{display:flex;justify-content:space-around;margin:26px auto;width:90%;max-width:1100px;background:rgba(255,255,255,0.85);padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+footer{text-align:center;padding:14px;background:#fff3e0;color:#444;margin-top:40px}
+.auth-box{max-width:360px;margin:80px auto;background:#fff;padding:24px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.08);text-align:center}
+.auth-box input{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #e6eefb}
+.auth-box button{background:#0078ff;color:#fff;padding:10px 14px;border:none;border-radius:8px;cursor:pointer}
+.solar-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle at 20% 20%,rgba(255,235,160,0.04),transparent 6%),radial-gradient(circle at 80% 80%,rgba(255,200,120,0.03),transparent 6%);animation:slowshift 12s linear infinite}
+@keyframes slowshift{0%{background-position:0% 0%,100% 100%}50%{background-position:5% 2%,95% 98%}100%{background-position:0% 0%,100% 100%}}
+.details-wrap{max-width:1100px;margin:28px auto;padding:22px}
+.history{width:100%;border-collapse:collapse;margin-top:16px}
+.history th,.history td{padding:10px 12px;border-bottom:1px solid #f2f4f6}
