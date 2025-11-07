@@ -14,7 +14,6 @@ bcrypt = Bcrypt(app)
 THINGSPEAK_CHANNEL_ID = "3117457"
 THINGSPEAK_READ_API_KEY = "O1MK5ODEM3Z7SKTE"
 
-# Field mapping: field number -> display name (used for routing)
 FIELD_MAP = {
     1: "LDR1 (V)",
     2: "LDR2 (Cm)",
@@ -27,7 +26,7 @@ FIELD_MAP = {
 }
 
 # -------------------------
-# Database helpers
+# Database setup
 # -------------------------
 DB_PATH = "database.db"
 
@@ -46,28 +45,13 @@ def init_db():
             password TEXT NOT NULL
         )
     ''')
-    # optional tables for local test data (not required)
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS fields (
-            id INTEGER PRIMARY KEY,
-            name TEXT
-        )
-    ''')
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS data (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            field_id INTEGER,
-            time TEXT,
-            value REAL
-        )
-    ''')
     conn.commit()
     conn.close()
 
 init_db()
 
 # -------------------------
-# ThingSpeak helper
+# ThingSpeak helper functions
 # -------------------------
 def fetch_thingspeak_field(field, results=50):
     if not THINGSPEAK_CHANNEL_ID:
@@ -79,23 +63,14 @@ def fetch_thingspeak_field(field, results=50):
         r.raise_for_status()
         data = r.json()
         feeds = data.get("feeds", [])
-        out = []
         key = f"field{field}"
-        for feed in feeds:
-            raw = feed.get(key)
-            if raw is None or raw == "":
-                value = None
-            else:
-                # try to convert numeric values when possible
-                try:
-                    value = float(raw)
-                except Exception:
-                    value = raw
-            out.append({
+        return [
+            {
                 "created_at": feed.get("created_at"),
-                "value": value
-            })
-        return out
+                "value": float(feed.get(key)) if feed.get(key) not in (None, "") else None
+            }
+            for feed in feeds
+        ]
     except Exception as e:
         print("ThingSpeak fetch error:", e)
         return []
@@ -108,27 +83,23 @@ def fetch_latest_feeds(results=1):
     try:
         r = requests.get(url, params=params, timeout=10)
         r.raise_for_status()
-        data = r.json()
-        feeds = data.get("feeds", [])
-        return feeds
+        return r.json().get("feeds", [])
     except Exception as e:
         print("ThingSpeak latest fetch error:", e)
         return []
 
 # -------------------------
-# Routes: Auth
+# Routes
 # -------------------------
 
-@app.route('/simulation')
-def simulation():
-    return render_template('simulation.html')
-
+# ✅ Home route — redirects to login or dashboard
 @app.route("/")
-def index():
+def home():
     if "user_id" in session:
         return redirect(url_for("dashboard"))
     return redirect(url_for("login"))
 
+# ✅ Signup
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
@@ -139,45 +110,41 @@ def signup():
             return render_template("signup.html")
         hashed = bcrypt.generate_password_hash(password).decode("utf-8")
         conn = get_db_connection()
-        c = conn.cursor()
         try:
-            c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed))
+            conn.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed))
             conn.commit()
             flash("Account created successfully. Please log in.", "success")
             return redirect(url_for("login"))
         except sqlite3.IntegrityError:
-            flash("Username already taken. Choose another.", "danger")
+            flash("Username already exists.", "danger")
         finally:
             conn.close()
     return render_template("signup.html")
 
+# ✅ Login
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
         conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("SELECT id, password FROM users WHERE username = ?", (username,))
-        row = c.fetchone()
+        row = conn.execute("SELECT id, password FROM users WHERE username = ?", (username,)).fetchone()
         conn.close()
         if row and bcrypt.check_password_hash(row["password"], password):
             session["user_id"] = row["id"]
             session["username"] = username
             return redirect(url_for("dashboard"))
-        else:
-            flash("Invalid credentials.", "danger")
+        flash("Invalid username or password.", "danger")
     return render_template("login.html")
 
+# ✅ Logout
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("Logged out.", "info")
+    flash("Logged out successfully.", "info")
     return redirect(url_for("login"))
 
-# -------------------------
-# Dashboard & API endpoints
-# -------------------------
+# ✅ Dashboard
 @app.route("/dashboard")
 def dashboard():
     if "user_id" not in session:
@@ -186,6 +153,14 @@ def dashboard():
     latest_entry = latest[-1] if latest else None
     return render_template("dashboard.html", latest=latest_entry, field_map=FIELD_MAP)
 
+# ✅ Simulation
+@app.route("/simulation")
+def simulation():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    return render_template("simulation.html")
+
+# ✅ Details
 @app.route("/details/<int:field>")
 def details(field):
     if "user_id" not in session:
@@ -196,16 +171,18 @@ def details(field):
     history = fetch_thingspeak_field(field, results=100)
     return render_template("details.html", field=field, title=FIELD_MAP[field], history=history)
 
+# ✅ API endpoint
 @app.route("/api/field/<int:field>")
 def api_field(field):
     if "user_id" not in session:
-        return jsonify({"error":"unauthorized"}), 401
+        return jsonify({"error": "unauthorized"}), 401
     results = request.args.get("results", 50, type=int)
     data = fetch_thingspeak_field(field, results=results)
     labels = [entry["created_at"] for entry in data]
     values = [entry["value"] for entry in data]
     return jsonify({"labels": labels, "values": values})
 
+# ✅ About and health
 @app.route("/about")
 def about():
     return render_template("about.html")
@@ -214,11 +191,9 @@ def about():
 def health():
     return "OK", 200
 
-@app.route('/')
-def home():
-    return render_template('login.html')
-
-
+# -------------------------
+# Run
+# -------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
